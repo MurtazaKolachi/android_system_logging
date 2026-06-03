@@ -74,21 +74,24 @@ static void refresh_cache(cached_char* cache, const char* key) {
   }
   cache->serial = __system_property_serial(cache->pinfo);
 
-  // __system_property_read() can't fail because we're using an existing prop_info*.
-  char buf[PROP_VALUE_MAX] __attribute__((__uninitialized__));
-  __system_property_read(cache->pinfo, 0, buf);
-  switch (buf[0]) {
-    case 't':
-    case 'T':
-      cache->c = strcasecmp(buf + 1, "rue") ? buf[0] : BOOLEAN_TRUE;
-      break;
-    case 'f':
-    case 'F':
-      cache->c = strcasecmp(buf + 1, "alse") ? buf[0] : BOOLEAN_FALSE;
-      break;
-    default:
-      cache->c = buf[0];
-  }
+  __system_property_read_callback(
+      cache->pinfo,
+      [](void* cookie, const char*, const char* value, uint32_t) {
+        auto* cache = static_cast<cached_char*>(cookie);
+        switch (value[0]) {
+          case 't':
+          case 'T':
+            cache->c = strcasecmp(value + 1, "rue") ? value[0] : BOOLEAN_TRUE;
+            break;
+          case 'f':
+          case 'F':
+            cache->c = strcasecmp(value + 1, "alse") ? value[0] : BOOLEAN_FALSE;
+            break;
+          default:
+            cache->c = value[0];
+        }
+      },
+      cache);
 }
 
 static int __android_log_level(const char* tag, size_t tag_len) {
